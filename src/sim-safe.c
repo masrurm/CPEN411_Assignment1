@@ -84,6 +84,14 @@ static counter_t sim_num_refs = 0;
 /* maximum number of inst's to execute */
 static unsigned int max_insts;
 
+/**---CACHE CODE---**/
+/* simulated struct of a single cache line */
+struct cache {
+	int valid;		// valid flag (0 = nothing is in cacheline, 1 = we something in cacheline)
+	int tag;		// tag to keep track of address
+	int offset;		// offset for data
+}
+
 /* register simulator-specific options */
 void
 sim_reg_options(struct opt_odb_t *odb)
