@@ -90,7 +90,14 @@ struct cache {
 	int valid;		// valid flag (0 = nothing is in cacheline, 1 = we something in cacheline)
 	int tag;		// tag to keep track of address
 	int offset;		// offset for data
-}
+};
+
+/* 32 KB, 64-byte block direct mapped cache */
+/* assuming 32 bit cache line*/
+/* offset -- 64 bytes = 2^6 = 6 bits */
+/* index -- 32KB/64B = 2^9 = 9 bits */
+/* tag -- 32 - 6 - 9 = 17 bits */
+struct cache directCache[512];
 
 /* register simulator-specific options */
 void
