@@ -85,19 +85,19 @@ static counter_t sim_num_refs = 0;
 static unsigned int max_insts;
 
 /**---CACHE CODE---**/
-/* simulated struct of a single cache line */
-struct cache {
-	int valid;		// valid flag (0 = nothing is in cacheline, 1 = we something in cacheline)
-	int tag;		// tag to keep track of address
-	int offset;		// offset for data
-};
 
-/* 32 KB, 64-byte block direct mapped cache */
-/* assuming 32 bit cache line*/
-/* offset -- 64 bytes = 2^6 = 6 bits */
-/* index -- 32KB/64B = 2^9 = 9 bits */
-/* tag -- 32 - 6 - 9 = 17 bits */
-struct cache directCache[512];
+/* counter to keep track of cache hits */
+static unsigned int cache_hit;
+
+/* counter to keep track of cache misses */
+static unsigned int cache_miss;
+
+/* struct to simulate a cache line, set all values to zero intially */
+struct cache {
+	int valid = 0;		// valid flag (0 = nothing is in cacheline, 1 = something in cacheline)
+	int tag = 0;		// tag to keep track of address
+	int offset = 0;		// offset for data
+};
 
 /* register simulator-specific options */
 void
@@ -129,6 +129,15 @@ sim_check_options(struct opt_odb_t *odb, int argc, char **argv)
 void
 sim_reg_stats(struct stat_sdb_t *sdb)
 {
+  // display total cache hits 
+  stat_reg_counter(sdb, "cache_hits",
+		   "total number of cache hits",
+		   &cache_hits, 0, NULL);
+  // display total cache misses
+  stat_reg_counter(sdb, "cache_misses",
+		   "total number of cache_misses",
+		   &cache_misses, 0, NULL);
+  
   stat_reg_counter(sdb, "sim_num_insn",
 		   "total number of instructions executed",
 		   &sim_num_insn, sim_num_insn, NULL);
@@ -297,12 +306,26 @@ sim_main(void)
   enum md_opcode op;
   register int is_write;
   enum md_fault_type fault;
+	
+  /**---CACHE CODE---**/
+  int index_bits;			// value to store calculated index bits from address
+  unsigned address_mask;		// mask to get the bits from the address
 
   fprintf(stderr, "sim: ** starting functional simulation **\n");
 
   /* set up initial default next PC */
   regs.regs_NPC = regs.regs_PC + sizeof(md_inst_t);
 
+  /*---DIRECT MAPPED CACHE---*/
+  /* 
+   * 32 KB, 64-byte block direct mapped cache
+   * assuming 32 bit cache line
+   * offset -- 64 bytes = 2^6 = 6 bits
+   * set -- 32KB/64B = 500 -> 512 closest power of two
+   * index -- 512 = 2^9 = 9 bits
+   * tag -- 32 - 6 - 9 = 17 bits 
+   */
+  struct cache directCache[512];		// cache using struct index to simulate set number
 
   while (TRUE)
     {
@@ -314,7 +337,21 @@ sim_main(void)
 
       /* get the next instruction to execute */
       MD_FETCH_INST(inst, mem, regs.regs_PC);
-
+	  
+     /*---DIRECT MAPPED CACHE---*/
+     address_mask = ((1 << 9) - 1) << 6 			// isolate 9 bits starting from bit 6 in the address
+     index_bits = regs.regs_PC & address_mask;			// store bits as INDEX
+     tag_bits = regs.regs_PC >> 15;				// grab the upper bits from bit 15+ to get TAG	
+     
+     // check if our new TAG matches cache TAG at INDEX
+     if (tag_bits == directCache[index_bits].tag){
+	 cache_hit++;						// if yes, increment cache hit counter
+     }
+     
+     else {
+	  cache_miss++						// else increment cache miss counter
+     }
+	 
       /* keep an instruction count */
       sim_num_insn++;
 
