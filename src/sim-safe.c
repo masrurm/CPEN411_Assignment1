@@ -87,10 +87,10 @@ static unsigned int max_insts;
 /**---CACHE CODE---**/
 
 /* counter to keep track of cache hits */
-static unsigned int cache_hit;
+static unsigned int cache_hit = 0;
 
 /* counter to keep track of cache misses */
-static unsigned int cache_miss;
+static unsigned int cache_miss = 0;
 
 /* struct to simulate a cache line, set all values to zero intially */
 struct cache {
@@ -130,13 +130,13 @@ void
 sim_reg_stats(struct stat_sdb_t *sdb)
 {
   // display total cache hits 
-  stat_reg_counter(sdb, "cache_hits",
+  stat_reg_counter(sdb, "cache_hit",
 		   "total number of cache hits",
-		   &cache_hits, 0, NULL);
+		   &cache_hit, 0, NULL);
   // display total cache misses
-  stat_reg_counter(sdb, "cache_misses",
+  stat_reg_counter(sdb, "cache_miss",
 		   "total number of cache_misses",
-		   &cache_misses, 0, NULL);
+		   &cache_miss, 0, NULL);
   
   stat_reg_counter(sdb, "sim_num_insn",
 		   "total number of instructions executed",
